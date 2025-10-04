@@ -18,7 +18,9 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: 'http://localhost:5173', // Frontend URL
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-frontend-domain.com', 'http://localhost:5173'] 
+    : 'http://localhost:5173',
   credentials: true
 }));
 app.use(cookieParser());
@@ -54,6 +56,26 @@ app.get('/api/test', (req, res) => {
     success: true, 
     message: 'API is working!',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'MicroCourses API is running!',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      test: '/api/test',
+      auth: '/api/auth',
+      courses: '/api/courses',
+      lessons: '/api/lessons',
+      creator: '/api/creator',
+      admin: '/api/admin',
+      learner: '/api/learner'
+    },
+    documentation: 'https://github.com/byteom/micorCourses-backend'
   });
 });
 
