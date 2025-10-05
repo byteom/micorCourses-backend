@@ -19,9 +19,11 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend-domain.com', 'http://localhost:5173'] 
-    : 'http://localhost:5173',
-  credentials: true
+    ? ['https://micorcourses-frontend.onrender.com', 'https://microocourse-frontendd.vercel.app', 'http://localhost:5173', 'http://localhost:5174'] 
+    : ['http://localhost:5173', 'http://localhost:5174'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 app.use(cookieParser());
 
