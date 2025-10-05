@@ -17,14 +17,44 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://micorcourses-frontend.onrender.com', 'https://microocourse-frontendd.vercel.app', 'http://localhost:5173', 'http://localhost:5174'] 
-    : ['http://localhost:5173', 'http://localhost:5174'],
+
+// Dynamic CORS allowlist (supports env var, localhost, Render, and Vercel preview domains)
+const baseAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://micorcourses-frontend.onrender.com',
+  'https://micro-course-frontend-2n2o-7gar33vtd-byteoms-projects.vercel.app',
+  'https://microocourse-frontendd.vercel.app'
+];
+
+const envAllowed = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [...new Set([...baseAllowedOrigins, ...envAllowed])];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser requests and same-origin
+    if (!origin) return callback(null, true);
+
+    const isExplicitlyAllowed = allowedOrigins.includes(origin);
+    const isVercelPreview = /\.vercel\.app$/.test(origin);
+    const isRenderApp = /\.onrender\.com$/.test(origin);
+
+    if (isExplicitlyAllowed || isVercelPreview || isRenderApp) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
 app.use(cookieParser());
 
 // Rate limiting
