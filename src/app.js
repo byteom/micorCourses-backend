@@ -55,6 +55,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+// Ensure preflight works for all routes in various hosting setups
+app.options('*', cors(corsOptions));
 app.use(cookieParser());
 
 // Rate limiting

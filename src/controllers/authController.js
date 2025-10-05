@@ -35,11 +35,11 @@ const register = asyncHandler(async (req, res) => {
     
     // Set cookie (accessible by JavaScript for frontend)
     res.cookie('token', token, {
-      httpOnly: false, // Allow JavaScript access
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      path: '/' // Ensure cookie is available on all paths
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
     res.status(201).json({
@@ -112,11 +112,11 @@ const login = asyncHandler(async (req, res) => {
   
   // Set cookie (accessible by JavaScript for frontend)
   res.cookie('token', token, {
-    httpOnly: false, // Allow JavaScript access
+    httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    path: '/' // Ensure cookie is available on all paths
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/'
   });
 
   res.json({
@@ -248,10 +248,10 @@ const changePassword = asyncHandler(async (req, res) => {
 // @access  Private
 const logout = asyncHandler(async (req, res) => {
   res.cookie('token', '', {
-    httpOnly: false, // Match the login cookie settings
+    httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Match the login cookie settings
-    path: '/', // Match the login cookie settings
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/',
     expires: new Date(0)
   });
 
