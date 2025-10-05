@@ -75,26 +75,34 @@ const validateCourse = asyncHandler(async (req, res, next) => {
 
 // Validate lesson creation/update
 const validateLesson = asyncHandler(async (req, res, next) => {
-  const { title, order, duration } = req.body;
+  const raw = req.body || {};
+  const title = typeof raw.title === 'string' ? raw.title.trim() : raw.title;
+  const duration = raw.duration;
+  const order = raw.order;
 
   const errors = [];
 
-  if (!title || title.trim().length === 0) {
+  if (!title || title.length === 0) {
     errors.push('Title is required');
   } else if (title.length > 100) {
     errors.push('Title cannot exceed 100 characters');
   }
 
-  if (!order) {
-    errors.push('Lesson order is required');
-  } else if (isNaN(order) || order < 1) {
-    errors.push('Order must be a positive number');
+  // For creation (POST to /courses/:courseId/lessons), order is computed server-side
+  const isCreate = req.method === 'POST' && !!req.params.courseId;
+  if (!isCreate) {
+    if (order === undefined || order === null) {
+      errors.push('Lesson order is required');
+    } else if (isNaN(order) || Number(order) < 1) {
+      errors.push('Order must be a positive number');
+    }
   }
 
-  if (!duration) {
-    errors.push('Duration is required');
-  } else if (isNaN(duration) || duration < 1) {
-    errors.push('Duration must be at least 1 minute');
+  // Duration is optional on create (we can infer from uploaded video); if provided, validate
+  if (duration !== undefined && duration !== null && duration !== '') {
+    if (isNaN(duration) || Number(duration) < 1) {
+      errors.push('Duration must be at least 1 minute when provided');
+    }
   }
 
   if (errors.length > 0) {
