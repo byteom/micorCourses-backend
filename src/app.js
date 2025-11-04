@@ -18,13 +18,13 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
-// Dynamic CORS allowlist (supports env var, localhost, Render, and Vercel preview domains)
+// Dynamic CORS allowlist (supports env var, localhost, and Vercel preview domains)
 const baseAllowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://micorcourses-frontend.onrender.com',
   'https://micro-course-frontend-2n2o-7gar33vtd-byteoms-projects.vercel.app',
-  'https://microocourse-frontendd.vercel.app'
+  'https://microocourse-frontendd.vercel.app',
+  process.env.CORS_ORIGINS
 ];
 
 const envAllowed = (process.env.CORS_ORIGINS || '')
@@ -41,9 +41,8 @@ const corsOptions = {
 
     const isExplicitlyAllowed = allowedOrigins.includes(origin);
     const isVercelPreview = /\.vercel\.app$/.test(origin);
-    const isRenderApp = /\.onrender\.com$/.test(origin);
 
-    if (isExplicitlyAllowed || isVercelPreview || isRenderApp) {
+    if (isExplicitlyAllowed || isVercelPreview) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));

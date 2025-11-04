@@ -40,7 +40,7 @@ The seed process creates 3 admin users:
 npm run seed:admins
 ```
 
-### Production (Render)
+### Production
 ```bash
 # Connect to your production database
 # Set MONGO_URI environment variable

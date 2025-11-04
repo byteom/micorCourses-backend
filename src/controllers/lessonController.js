@@ -1,7 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Lesson = require('../models/Lesson');
 const Course = require('../models/Course');
-const { cloudinary } = require('../config/cloudinary');
+const { deleteFromS3 } = require('../config/s3');
 
 // @desc    Get lessons for a course
 // @route   GET /api/courses/:courseId/lessons
@@ -162,7 +162,7 @@ const createLesson = asyncHandler(async (req, res) => {
     // If lesson creation fails, delete uploaded video
     if (req.file && req.file.filename) {
       try {
-        await cloudinary.uploader.destroy(req.file.filename, { resource_type: 'video' });
+        await deleteFromS3(req.file.filename);
       } catch (deleteError) {
         console.error('Error deleting video after failed lesson creation:', deleteError);
       }
@@ -273,12 +273,12 @@ const deleteLesson = asyncHandler(async (req, res) => {
     });
   }
 
-  // Delete video from Cloudinary
+  // Delete video from S3
   if (lesson.video.publicId) {
     try {
-      await cloudinary.uploader.destroy(lesson.video.publicId, { resource_type: 'video' });
+      await deleteFromS3(lesson.video.publicId);
     } catch (error) {
-      console.error('Error deleting video from Cloudinary:', error);
+      console.error('Error deleting video from S3:', error);
     }
   }
 

@@ -6,9 +6,10 @@
 PORT=4001
 MONGO_URI=mongodb+srv://...
 JWT_SECRET=replace_me
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_REGION=us-east-1
+AWS_S3_BUCKET_NAME=your-bucket-name
 NODE_ENV=development
 ```
 2. Install and start:

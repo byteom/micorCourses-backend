@@ -18,7 +18,7 @@ const {
 } = require('../controllers/creatorController');
 const { protect, authorize } = require('../middlewares/auth');
 const { validateCourse, validateLesson } = require('../middlewares/validation');
-const { uploadThumbnail, uploadLesson } = require('../config/cloudinary');
+const { uploadThumbnail, uploadLesson, uploadVideo: uploadVideoMiddleware } = require('../config/s3');
 
 const router = express.Router();
 
@@ -48,7 +48,7 @@ router.put('/lessons/:id', uploadLesson.fields([
 router.delete('/lessons/:id', deleteLesson);
 
 // File upload
-router.post('/upload/video', uploadVideo);
+router.post('/upload/video', uploadVideoMiddleware.single('video'), uploadVideo);
 
 
 // Student management

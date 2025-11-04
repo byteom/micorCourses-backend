@@ -75,12 +75,20 @@ const errorHandler = (err, req, res, next) => {
     };
   }
 
-  // Cloudinary errors
-  if (err.http_code) {
-    const message = err.message || 'File upload failed';
+  // AWS S3 errors
+  if (error.name === 'NoSuchKey' || error.name === 'NotFound') {
+    const message = 'File not found in storage';
     error = {
       message,
-      statusCode: err.http_code
+      statusCode: 404
+    };
+  }
+
+  if (error.name === 'AccessDenied' || error.name === 'Forbidden') {
+    const message = 'Access denied to storage resource';
+    error = {
+      message,
+      statusCode: 403
     };
   }
 

@@ -8,7 +8,7 @@ A comprehensive Learning Management System (LMS) backend built with Node.js, Exp
 - **Course Management**: Create, update, and manage courses with lessons
 - **Learning Progress**: Track student progress and issue certificates
 - **Admin Panel**: Comprehensive admin controls for user and content management
-- **File Upload**: Video and image upload with Cloudinary integration
+- **File Upload**: Video and image upload with AWS S3 integration
 
 ## User Roles
 
@@ -82,9 +82,10 @@ A comprehensive Learning Management System (LMS) backend built with Node.js, Exp
 - `PORT` - Server port (default: 5000)
 - `MONGO_URI` - MongoDB connection string
 - `JWT_SECRET` - JWT secret key
-- `CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name
-- `CLOUDINARY_API_KEY` - Cloudinary API key
-- `CLOUDINARY_API_SECRET` - Cloudinary API secret
+- `AWS_ACCESS_KEY_ID` - AWS access key ID
+- `AWS_SECRET_ACCESS_KEY` - AWS secret access key
+- `AWS_REGION` - AWS region (e.g., us-east-1)
+- `AWS_S3_BUCKET_NAME` - S3 bucket name for file storage
 - `NODE_ENV` - Environment (development/production)
 
 ## Scripts
@@ -114,4 +115,4 @@ The API returns consistent error responses with appropriate HTTP status codes an
 
 ## File Upload
 
-Video and image uploads are handled through Cloudinary integration with automatic optimization and CDN delivery.
+Video and image uploads are handled through AWS S3 integration with automatic file management and CDN delivery.

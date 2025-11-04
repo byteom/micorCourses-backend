@@ -2,7 +2,7 @@ const asyncHandler = require('express-async-handler');
 const Course = require('../models/Course');
 const Lesson = require('../models/Lesson');
 const User = require('../models/User');
-const { cloudinary } = require('../config/cloudinary');
+const { deleteFromS3, uploadToS3 } = require('../config/s3');
 
 // @desc    Get all published courses
 // @route   GET /api/courses
@@ -244,24 +244,24 @@ const deleteCourse = asyncHandler(async (req, res) => {
     });
   }
 
-  // Delete associated lessons and their videos from Cloudinary
+  // Delete associated lessons and their videos from S3
   const lessons = await Lesson.find({ course: course._id });
   for (const lesson of lessons) {
     if (lesson.video.publicId) {
       try {
-        await cloudinary.uploader.destroy(lesson.video.publicId, { resource_type: 'video' });
+        await deleteFromS3(lesson.video.publicId);
       } catch (error) {
-        console.error('Error deleting video from Cloudinary:', error);
+        console.error('Error deleting video from S3:', error);
       }
     }
   }
 
-  // Delete course thumbnail from Cloudinary
+  // Delete course thumbnail from S3
   if (course.thumbnail && course.thumbnail.publicId) {
     try {
-      await cloudinary.uploader.destroy(course.thumbnail.publicId);
+      await deleteFromS3(course.thumbnail.publicId);
     } catch (error) {
-      console.error('Error deleting thumbnail from Cloudinary:', error);
+      console.error('Error deleting thumbnail from S3:', error);
     }
   }
 
@@ -304,16 +304,19 @@ const uploadThumbnail = asyncHandler(async (req, res) => {
   // Delete old thumbnail if exists
   if (course.thumbnail && course.thumbnail.publicId) {
     try {
-      await cloudinary.uploader.destroy(course.thumbnail.publicId);
+      await deleteFromS3(course.thumbnail.publicId);
     } catch (error) {
       console.error('Error deleting old thumbnail:', error);
     }
   }
 
+  // Upload new thumbnail to S3
+  const uploadResult = await uploadToS3(req.file, 'microcourses/thumbnails');
+
   // Update course with new thumbnail
   course.thumbnail = {
-    url: req.file.path,
-    publicId: req.file.filename
+    url: uploadResult.url,
+    publicId: uploadResult.key // Store S3 key as publicId for compatibility
   };
 
   await course.save();

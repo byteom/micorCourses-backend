@@ -25,7 +25,7 @@ Version: 1.0.0
 - 100 requests per 15 minutes per IP (HTTP 429 on exceed).
 
 ## CORS
-- Dynamic allowlist plus Render/Vercel previews.
+- Dynamic allowlist plus Vercel previews.
 - Send credentials if using cookie auth.
 
 ## Conventions

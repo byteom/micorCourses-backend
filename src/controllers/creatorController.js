@@ -2,7 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const Lesson = require('../models/Lesson');
-const { cloudinary } = require('../config/cloudinary');
+const { uploadToS3, deleteFromS3 } = require('../config/s3');
 
 // @desc    Apply to become a creator
 // @route   POST /api/creator/apply
@@ -297,9 +297,10 @@ const createCourse = asyncHandler(async (req, res) => {
     // Handle thumbnail upload
     let thumbnailData = {};
     if (req.file) {
+      const uploadResult = await uploadToS3(req.file, 'microcourses/thumbnails');
       thumbnailData = {
-        url: req.file.path,
-        publicId: req.file.filename
+        url: uploadResult.url,
+        publicId: uploadResult.key // Store S3 key as publicId for compatibility
       };
     }
 
@@ -483,17 +484,16 @@ const updateCourse = asyncHandler(async (req, res) => {
     try {
       // Delete old thumbnail if exists
       if (course.thumbnail && course.thumbnail.publicId) {
-        try {
-          await cloudinary.uploader.destroy(course.thumbnail.publicId);
-        } catch (deleteError) {
-          console.error('Error deleting old thumbnail:', deleteError);
-        }
+        await deleteFromS3(course.thumbnail.publicId);
       }
 
+      // Upload new thumbnail to S3
+      const uploadResult = await uploadToS3(req.file, 'microcourses/thumbnails');
+      
       // Update course thumbnail with the uploaded file info
       course.thumbnail = {
-        url: req.file.path, // CloudinaryStorage provides the URL in path
-        publicId: req.file.filename // CloudinaryStorage provides the public_id in filename
+        url: uploadResult.url,
+        publicId: uploadResult.key // Store S3 key as publicId for compatibility
       };
     } catch (uploadError) {
       console.error('Thumbnail upload error:', uploadError);
@@ -605,7 +605,7 @@ const createLesson = asyncHandler(async (req, res) => {
   const thumbnailFile = req.files.thumbnail ? req.files.thumbnail[0] : null;
 
   try {
-    // Upload video to Cloudinary
+    // Upload video to S3
     console.log('Uploading video file:', {
       filename: videoFile.originalname,
       mimetype: videoFile.mimetype,
@@ -613,18 +613,9 @@ const createLesson = asyncHandler(async (req, res) => {
       hasBuffer: !!videoFile.buffer
     });
 
-    const videoResult = await cloudinary.uploader.upload(
-      `data:${videoFile.mimetype};base64,${videoFile.buffer.toString('base64')}`,
-      {
-        resource_type: 'video',
-        folder: 'microcourses/videos',
-        transformation: [
-          { quality: 'auto', fetch_format: 'auto' }
-        ]
-      }
-    );
+    const videoResult = await uploadToS3(videoFile, 'microcourses/videos');
 
-    // Upload thumbnail to Cloudinary if provided
+    // Upload thumbnail to S3 if provided
     let thumbnailResult = null;
     if (thumbnailFile) {
       console.log('Uploading thumbnail file:', {
@@ -634,16 +625,7 @@ const createLesson = asyncHandler(async (req, res) => {
         hasBuffer: !!thumbnailFile.buffer
       });
 
-      thumbnailResult = await cloudinary.uploader.upload(
-        `data:${thumbnailFile.mimetype};base64,${thumbnailFile.buffer.toString('base64')}`,
-        {
-          resource_type: 'image',
-          folder: 'microcourses/thumbnails',
-          transformation: [
-            { width: 800, height: 450, crop: 'fill', quality: 'auto' }
-          ]
-        }
-      );
+      thumbnailResult = await uploadToS3(thumbnailFile, 'microcourses/thumbnails');
     }
 
     const nextOrder = await Lesson.getNextOrder(courseId);
@@ -654,13 +636,13 @@ const createLesson = asyncHandler(async (req, res) => {
       course: courseId,
       order: nextOrder,
       video: {
-        url: videoResult.secure_url,
-        publicId: videoResult.public_id,
-        duration: videoResult.duration || 0
+        url: videoResult.url,
+        publicId: videoResult.key, // Store S3 key as publicId for compatibility
+        duration: 0 // Video duration would need to be extracted separately if needed
       },
       thumbnail: thumbnailResult ? {
-        url: thumbnailResult.secure_url,
-        publicId: thumbnailResult.public_id
+        url: thumbnailResult.url,
+        publicId: thumbnailResult.key // Store S3 key as publicId for compatibility
       } : undefined,
       duration: parseInt(duration),
       notes: notes?.trim()
@@ -687,7 +669,7 @@ const createLesson = asyncHandler(async (req, res) => {
     });
     return res.status(500).json({
       success: false,
-      message: 'Error uploading files to Cloudinary',
+      message: 'Error uploading files to S3',
       error: uploadError.message
     });
   }
@@ -728,37 +710,18 @@ const updateLesson = asyncHandler(async (req, res) => {
     const thumbnailFile = req.files.thumbnail[0];
     
     try {
-      // Upload new thumbnail to Cloudinary
-      const thumbnailResult = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            resource_type: 'image',
-            folder: 'microcourses/thumbnails',
-            transformation: [
-              { width: 800, height: 450, crop: 'fill', quality: 'auto' }
-            ]
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
-        uploadStream.end(thumbnailFile.buffer);
-      });
-
       // Delete old thumbnail if exists
       if (lesson.thumbnail && lesson.thumbnail.publicId) {
-        try {
-          await cloudinary.uploader.destroy(lesson.thumbnail.publicId);
-        } catch (deleteError) {
-          console.error('Error deleting old thumbnail:', deleteError);
-        }
+        await deleteFromS3(lesson.thumbnail.publicId);
       }
+
+      // Upload new thumbnail to S3
+      const thumbnailResult = await uploadToS3(thumbnailFile, 'microcourses/thumbnails');
 
       // Update lesson thumbnail
       lesson.thumbnail = {
-        url: thumbnailResult.secure_url,
-        publicId: thumbnailResult.public_id
+        url: thumbnailResult.url,
+        publicId: thumbnailResult.key // Store S3 key as publicId for compatibility
       };
     } catch (uploadError) {
       console.error('Thumbnail upload error:', uploadError);
@@ -888,15 +851,26 @@ const uploadVideo = asyncHandler(async (req, res) => {
     });
   }
 
-  res.json({
-    success: true,
-    message: 'Video uploaded successfully',
-    data: {
-      url: req.file.path,
-      publicId: req.file.filename,
-      duration: req.file.duration || 0
-    }
-  });
+  try {
+    const uploadResult = await uploadToS3(req.file, 'microcourses/videos');
+    
+    res.json({
+      success: true,
+      message: 'Video uploaded successfully',
+      data: {
+        url: uploadResult.url,
+        publicId: uploadResult.key,
+        duration: 0 // Video duration would need to be extracted separately if needed
+      }
+    });
+  } catch (error) {
+    console.error('Video upload error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error uploading video',
+      error: error.message
+    });
+  }
 });
 
 // @desc    Submit course for review
